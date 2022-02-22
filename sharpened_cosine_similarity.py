@@ -142,7 +142,7 @@ class SharpenedCosineSimilarity_ConvImpl(nn.Module):
 
     def forward(self, x):
         # reshaping for compatibility with the einsum-based implementation
-        w = self.w.reshape(
+        w = self.w.view(
             self.out_channels,
             self.in_channels,
             self.kernel_size,
@@ -160,14 +160,15 @@ class SharpenedCosineSimilarity_ConvImpl(nn.Module):
         # instead of inside in order to reuse the performant
         # code of torch.linalg.vector_norm
         w_normed = w / ((w_norm + self.eps) + q_sqr)
-
+        
+        # For dilation we'd need Conv with a one-kernel 
         x_norm_squared = F.avg_pool2d(
-            x ** 2,
+            x.square().sum(dim=1, keepdim=True),
             kernel_size=self.kernel_size,
             stride=self.stride,
             padding=self.padding,
             divisor_override=1, # we actually want sum_pool
-        ).sum(dim=1, keepdim=True)
+        )
 
         y_denorm = F.conv2d(
             x,
